@@ -257,7 +257,6 @@ namespace MinecraftClassicChat
 		void SendChatMessage(String^ message)
 		{
 			if (!connected) return;
-			message = message;
 			int j = 0;
 			if (supportsLongerMessages) 
 			{
@@ -310,10 +309,10 @@ namespace MinecraftClassicChat
 			List<byte>^ packet = gcnew List<byte>();
 			packet->AddRange(convertByteArray(gcnew array<byte> { 0x11 }));
 			packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(extName->PadRight(64, ' '))));
-			byte byte1 = (int)extVer & 0x000000ff;
-			byte byte2 = ((int)extVer & 0x0000ff00) >> 8;
-			byte byte3 = ((int)extVer & 0x00ff0000) >> 16;
-			byte byte4 = ((int)extVer & 0xff000000) >> 24;
+			byte byte1 = ((int)extVer & 0xff000000) >> 24;
+			byte byte2 = ((int)extVer & 0x00ff0000) >> 16;
+			byte byte3 = ((int)extVer & 0x0000ff00) >> 8;
+			byte byte4 = (int)extVer & 0x000000ff;
 			packet->AddRange(convertByteArray(gcnew array<byte> { byte1, byte2, byte3, byte4 }));
 			tcpStream->Write(packet->ToArray(), 0, packet->ToArray()->Length);
 		}
