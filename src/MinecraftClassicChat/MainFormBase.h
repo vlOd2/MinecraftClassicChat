@@ -91,10 +91,11 @@ namespace MinecraftClassicChat
 			// 
 			// txtChat
 			// 
-			this->txtChat->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom) 
-				| System::Windows::Forms::AnchorStyles::Left) 
+			this->txtChat->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom)
+				| System::Windows::Forms::AnchorStyles::Left)
 				| System::Windows::Forms::AnchorStyles::Right));
-			this->txtChat->BackColor = System::Drawing::SystemColors::Window;
+			this->txtChat->BackColor = System::Drawing::Color::Black;
+			this->txtChat->ForeColor = System::Drawing::Color::White;
 			this->txtChat->Location = System::Drawing::Point(3, 28);
 			this->txtChat->Name = L"txtChat";
 			this->txtChat->ReadOnly = true;
@@ -104,7 +105,7 @@ namespace MinecraftClassicChat
 			// 
 			// txtInput
 			// 
-			this->txtInput->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Bottom | System::Windows::Forms::AnchorStyles::Left) 
+			this->txtInput->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Bottom | System::Windows::Forms::AnchorStyles::Left)
 				| System::Windows::Forms::AnchorStyles::Right));
 			this->txtInput->Location = System::Drawing::Point(3, 336);
 			this->txtInput->MaxLength = 64;
