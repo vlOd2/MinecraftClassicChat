@@ -109,10 +109,10 @@ namespace MinecraftClassicChat
 							iter.MoveNext();
 						}
 						int value = (int)iter.Current.Value;
-						byte b = (int)value & 0x000000ff;
-						byte g = ((int)value & 0x0000ff00) >> 8;
-						byte r = ((int)value & 0x00ff0000) >> 16;
 						byte a = ((int)value & 0xff000000) >> 24;
+						byte r = ((int)value & 0x00ff0000) >> 16;
+						byte g = ((int)value & 0x0000ff00) >> 8;
+						byte b = (int)value & 0x000000ff;
 						txtChat->SelectionStart = txtChat->TextLength;
 						txtChat->SelectionLength = 0;
 						txtChat->SelectionColor = Color::FromArgb(a, r, g, b);
@@ -400,11 +400,7 @@ namespace MinecraftClassicChat
 				Array::Copy(data, 64, extVerRaw, 0, 4);
 
 				String^ extName = Encoding::UTF8->GetString(extNameRaw);
-				int extVer = 0;
-				extVer = (extVer << 8) + ((byte)extVerRaw[0] & 0xFF);
-				extVer = (extVer << 8) + ((byte)extVerRaw[1] & 0xFF);
-				extVer = (extVer << 8) + ((byte)extVerRaw[2] & 0xFF);
-				extVer = (extVer << 8) + ((byte)extVerRaw[3] & 0xFF);
+				int extVer = (extVerRaw[0] << 24) | (extVerRaw[1] << 16) | (extVerRaw[2] << 8) | extVerRaw[3];
 				CheckExtension(extName, extVer);
 				recievedExts++;
 				if (recievedExts == (short)extCount) SendCpeInfo();
@@ -416,13 +412,13 @@ namespace MinecraftClassicChat
 				byte b = data[2];
 				byte a = data[3];
 				byte code = data[4];
-				int rgba = (a << 24) | (r << 16) | (g << 8) | b;
+				int argb = (a << 24) | (r << 16) | (g << 8) | b;
 				char toDict = Convert::ToChar(code);
 				if (textColors->ContainsKey(toDict))
 				{
 					textColors->Remove(toDict);
 				}
-				textColors->Add(toDict, rgba);
+				textColors->Add(toDict, argb);
 			}
 		}
 
