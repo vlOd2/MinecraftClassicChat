@@ -17,9 +17,15 @@ namespace MinecraftClassicChat
 	{
 	private:
 		Dictionary<int, int>^ packetSizeMap;
+		Dictionary<char, int>^ textColors;
 		bool connected;
+		bool supportsLongerMessages;
+		String^ clientName = "Classic Chat Client";
 		String^ serverIP;
+		array<String^>^ messagesToSend;
 		int serverPort;
+		short^ extCount;
+		short recievedExts;
 		TcpClient^ tcpClient;
 		NetworkStream^ tcpStream;
 		Thread^ tcpThread;
@@ -43,6 +49,28 @@ namespace MinecraftClassicChat
 			packetSizeMap->Add(0x0d, 65);
 			packetSizeMap->Add(0x0e, 64);
 			packetSizeMap->Add(0x0f, 1);
+			packetSizeMap->Add(0x10, 66);
+			packetSizeMap->Add(0x11, 68);
+			packetSizeMap->Add(0x27, 5);
+
+			textColors = gcnew Dictionary<char, int>();
+			textColors->Add('0', 0);
+			textColors->Add('1', 191);
+			textColors->Add('2', 48896);
+			textColors->Add('3', 49087);
+			textColors->Add('4', 12517376);
+			textColors->Add('5', 12517567);
+			textColors->Add('6', 12566272);
+			textColors->Add('7', 12566463);
+			textColors->Add('8', 4210752);
+			textColors->Add('9', 4210943);
+			textColors->Add('a', 4259648);
+			textColors->Add('b', 4259839);
+			textColors->Add('c', 16728128);
+			textColors->Add('d', 16728319);
+			textColors->Add('e', 16777024);
+			textColors->Add('f', 16777215);
+
 
 			btnSend->Click += gcnew EventHandler(this, &MainForm::btnSend_Click);
 			btnConnect->Click += gcnew EventHandler(this, &MainForm::btnConnect_Click);
@@ -67,7 +95,36 @@ namespace MinecraftClassicChat
 		delegate void LogDelegate(String^, String^);
 		void Log(String^ header, String^ body)
 		{
-			txtChat->Text += "[" + header + "] " + body + "\n";
+			txtChat->AppendText("[" + header + "] ");
+			// + body + "\n";
+			for (int i = 0; i < body->Length; i++)
+			{
+				if (body->ToCharArray()[i] == '&' && i + 1 != body->Length)
+				{
+					if (textColors->ContainsKey(body->ToCharArray()[i + 1]))
+					{
+						Dictionary<char, int>::Enumerator iter = textColors->GetEnumerator();
+						while (iter.Current.Key != body->ToCharArray()[i + 1])
+						{
+							iter.MoveNext();
+						}
+						int value = (int)iter.Current.Value;
+						byte b = (int)value & 0x000000ff;
+						byte g = ((int)value & 0x0000ff00) >> 8;
+						byte r = ((int)value & 0x00ff0000) >> 16;
+						byte a = ((int)value & 0xff000000) >> 24;
+						txtChat->SelectionStart = txtChat->TextLength;
+						txtChat->SelectionLength = 0;
+						txtChat->SelectionColor = Color::FromArgb(a, r, g, b);
+					}
+				}
+				else
+				{
+					if (body->ToCharArray()[i - 1 == -1 ? 0 : i - 1] != '&') txtChat->AppendText(Convert::ToString(body->ToCharArray()[i]));
+				}
+			}
+			txtChat->AppendText("\n");
+			txtChat->SelectionColor = txtChat->ForeColor;
 			txtChat->SelectionStart = txtChat->Text->Length;
 			txtChat->ScrollToCaret();
 		}
@@ -79,6 +136,7 @@ namespace MinecraftClassicChat
 				serverIP = ip;
 				serverPort = port;
 				tcpClient = gcnew TcpClient();
+				recievedExts = 0;
 
 				btnConnect->Enabled = false;
 				btnDisconnect->Enabled = false;
@@ -105,7 +163,7 @@ namespace MinecraftClassicChat
 				packet->AddRange(convertByteArray(gcnew array<byte> { 0x00, 0x07 }));
 				packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(username)));
 				packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(mppass)));
-				packet->AddRange(convertByteArray(gcnew array<byte> { 0x00 }));
+				packet->AddRange(convertByteArray(gcnew array<byte> { 0x42 }));
 				tcpStream->Write(packet->ToArray(), 0, packet->ToArray()->Length);
 			}
 			catch (Exception^ ex)
@@ -199,10 +257,64 @@ namespace MinecraftClassicChat
 		void SendChatMessage(String^ message)
 		{
 			if (!connected) return;
-			message = message->PadRight(64, ' ')->Substring(0, 64);
+			message = message;
+			int j = 0;
+			if (supportsLongerMessages) 
+			{
+				for (int i = 0; i < message->Length; i += 64)
+				{
+					j++;
+				}
+				messagesToSend = gcnew array<String^>(j);
+				j = 0;
+				for (int i = 0; i < message->Length; i += 64)
+				{
+					messagesToSend[j] = message->Substring(i, Math::Min(64, message->Length - i));
+					j++;
+				}
+			}
+			else
+			{
+				messagesToSend = gcnew array<String^>(1);
+				messagesToSend[0] = message;
+			}
+			for (int i = 0; i < messagesToSend->Length; i++)
+			{
+				message = messagesToSend[i]->PadRight(64, ' ')->Substring(0, 64);
+				List<byte>^ packet = gcnew List<byte>();
+				packet->AddRange(convertByteArray(gcnew array<byte> { 0x0d, i == messagesToSend->Length - 1 ? 0x00 : 0xFF }));
+				packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(message)));
+				tcpStream->Write(packet->ToArray(), 0, packet->ToArray()->Length);
+			}
+		}
+
+		void SendCpeInfo()
+		{
+			if (!connected) return;
 			List<byte>^ packet = gcnew List<byte>();
-			packet->AddRange(convertByteArray(gcnew array<byte> { 0x0d, 0xFF }));
-			packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(message)));
+			packet->AddRange(convertByteArray(gcnew array<byte> { 0x10 }));
+			packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(clientName->PadRight(64, ' '))));
+			packet->AddRange(convertByteArray(gcnew array<byte> { 0x00, 0x05 }));
+			tcpStream->Write(packet->ToArray(), 0, packet->ToArray()->Length);
+
+			SendExtInfo("EmoteFix", 1);
+			SendExtInfo("MessageTypes", 1);
+			SendExtInfo("LongerMessages", 1);
+			SendExtInfo("FullCP437", 1);
+			SendExtInfo("TextColors", 1);
+		}
+
+		void SendExtInfo(String^ extName, int^ extVer)
+		{
+			if (!connected) return;
+			List<byte>^ packet = gcnew List<byte>();
+			packet->AddRange(convertByteArray(gcnew array<byte> { 0x11 }));
+			packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(extName->PadRight(64, ' '))));
+			byte byte1 = (int)extVer & 0x000000ff;
+			byte byte2 = ((int)extVer & 0x0000ff00) >> 8;
+			byte byte3 = ((int)extVer & 0x00ff0000) >> 16;
+			byte byte4 = ((int)extVer & 0xff000000) >> 24;
+			packet->AddRange(convertByteArray(gcnew array<byte> { byte1, byte2, byte3, byte4 }));
 			tcpStream->Write(packet->ToArray(), 0, packet->ToArray()->Length);
 		}
 
@@ -214,6 +326,9 @@ namespace MinecraftClassicChat
 			// 0x00: Login packet
 			// 0x0d: Chat packet
 			// 0x0e: Kick packet
+			// 0x10: CPE ExtInfo
+			// 0x11: CPE ExtEntry
+			// 0x27: CPE SetTextColor
 			if (id == 0x00)
 			{
 				array<byte>^ serverNameRaw = gcnew array<byte>(64);
@@ -231,9 +346,32 @@ namespace MinecraftClassicChat
 			else if (id == 0x0d)
 			{
 				array<byte>^ chatMessageRaw = gcnew array<byte>(64);
+				byte playerID = data[0];
 				Array::Copy(data, 1, chatMessageRaw, 0, 64);
 				String^ chatMessage = Encoding::UTF8->GetString(chatMessageRaw);
-				Log("Chat", chatMessage);
+				switch (playerID)
+				{
+					case 1:
+						Log("Status1", chatMessage);
+					case 2:
+						Log("Status2", chatMessage);
+					case 3:
+						Log("Status3", chatMessage);
+					case 11:
+						Log("BottomStatus1", chatMessage);
+					case 12:
+						Log("BottomStatus2", chatMessage);
+					case 13:
+						Log("BottomStatus3", chatMessage);
+					case 100:
+						Log("Announcement", chatMessage);
+					case 101:
+						Log("BigAnnouncement", chatMessage);
+					case 102:
+						Log("SmallAnnouncement", chatMessage);
+					default:
+						Log("Chat", chatMessage);
+				}
 			}
 			else if (id == 0x0e)
 			{
@@ -243,6 +381,59 @@ namespace MinecraftClassicChat
 				MessageBox::Show(kickReason, "You have been kicked",
 					MessageBoxButtons::OK, MessageBoxIcon::Warning);
 			}
+			else if (id == 0x10)
+			{
+				array<byte>^ serverSoftwareRaw = gcnew array<byte>(64);
+				array<byte>^ extCountRaw = gcnew array<byte>(2);
+				Array::Copy(data, 0, serverSoftwareRaw, 0, 64);
+				Array::Copy(data, 64, extCountRaw, 0, 2);
+
+				String^ serverSoftwareName = Encoding::UTF8->GetString(serverSoftwareRaw);
+				Log("CPE", "Server software: " + serverSoftwareName);
+				extCount = (short)(((extCountRaw[0]) << 8) | extCountRaw[1]);
+			}
+			else if (id == 0x11)
+			{
+				array<byte>^ extNameRaw = gcnew array<byte>(64);
+				array<byte>^ extVerRaw = gcnew array<byte>(4);
+				Array::Copy(data, 0, extNameRaw, 0, 64);
+				Array::Copy(data, 64, extVerRaw, 0, 4);
+
+				String^ extName = Encoding::UTF8->GetString(extNameRaw);
+				int extVer = 0;
+				extVer = (extVer << 8) + ((byte)extVerRaw[0] & 0xFF);
+				extVer = (extVer << 8) + ((byte)extVerRaw[1] & 0xFF);
+				extVer = (extVer << 8) + ((byte)extVerRaw[2] & 0xFF);
+				extVer = (extVer << 8) + ((byte)extVerRaw[3] & 0xFF);
+				CheckExtension(extName, extVer);
+				recievedExts++;
+				if (recievedExts == (short)extCount) SendCpeInfo();
+			}
+			else if (id == 0x27)
+			{
+				byte r = data[0];
+				byte g = data[1];
+				byte b = data[2];
+				byte a = data[3];
+				byte code = data[4];
+				int rgba = (a << 24) | (r << 16) | (g << 8) | b;
+				char toDict = Convert::ToChar(code);
+				if (textColors->ContainsKey(toDict))
+				{
+					textColors->Remove(toDict);
+				}
+				textColors->Add(toDict, rgba);
+			}
+		}
+
+		void CheckExtension(String^ extName, int^ extVer)
+		{
+			if (extName->Contains("LongerMessages"))
+			{
+				supportsLongerMessages = true;
+				txtInput->MaxLength = Int32::MaxValue;
+			}
+			//TODO: ADD MORE EXTENSIONS HERE
 		}
 
 		Void btnSend_Click(Object^ sender, EventArgs^ e)
