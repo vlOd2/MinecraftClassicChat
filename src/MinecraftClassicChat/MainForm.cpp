@@ -1,10 +1,40 @@
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "MainForm.h"
 
 namespace MinecraftClassicChat 
 {
+	// These delegates are for invokes
+	delegate void LogDelegate(String^, String^);
+	delegate void DisconnectDelegate();
+	delegate void ReceivedPacketDelegate(byte, array<byte>^);
+
 	MainForm::MainForm()
 	{
+		Settings = gcnew MCCSettings();
+
+		try
+		{
+			if (!Directory::Exists(DataFolderPath))
+			{
+				Directory::CreateDirectory(DataFolderPath);
+			}
+
+			if (!File::Exists(SettingsFilePath))
+			{
+				File::Create(SettingsFilePath)->Close();
+			}
+
+			if (!Settings->Load(SettingsFilePath) || !Settings->Save(SettingsFilePath))
+			{
+				throw gcnew Exception("Something went wrong");
+			}
+		}
+		catch (Exception^ ex) 
+		{
+			MessageBox::Show("Unable to load the settings (" + SettingsFilePath + "): " + ex->Message, "Error", 
+				MessageBoxButtons::OK, MessageBoxIcon::Error);
+		}
+
 		packetSizeMap = gcnew Dictionary<int, int>();
 		packetSizeMap->Add(0x00, 130);
 		packetSizeMap->Add(0x01, 0);
@@ -42,16 +72,10 @@ namespace MinecraftClassicChat
 		textColors->Add('d', 16728319);
 		textColors->Add('e', 16777024);
 		textColors->Add('f', 16777215);
-		cpeClientName = ApplicationName;
-		serverCPEExtensions = gcnew Dictionary<String^, int>();
 
 		InitializeComponent();
-		Text = ApplicationName + " - Disconnected";
-
-		btnSend->Click += gcnew EventHandler(this, &MainForm::btnSend_Click);
-		btnDisconnect->Click += gcnew EventHandler(this, &MainForm::btnDisconnect_Click);
-		btnClearChat->Click += gcnew EventHandler(this, &MainForm::btnClearChat_Click);
-		FormClosing += gcnew FormClosingEventHandler(this, &MainForm::MainForm_FormClosing);
+		connected = true;
+		Disconnect(true);
 	}
 
 	List<byte>^ convertByteArray(array<byte>^ arr)
@@ -66,12 +90,21 @@ namespace MinecraftClassicChat
 		return lst;
 	}
 
-	delegate void LogDelegate(String^, String^);
-	delegate void DisconnectDelegate();
-	delegate void ReceivedPacketDelegate(byte, array<byte>^);
-
 	void MainForm::Log(String^ header, String^ body)
 	{
+		if (Settings->Entries["chatLogging"]->Equals("true"))
+		{
+			try 
+			{
+				File::AppendAllText(Settings->Entries["chatLoggingFilePath"], "[" + header + "] " + body + Environment::NewLine);
+			}
+			catch (Exception^ ex)
+			{
+				Settings->Entries["chatLogging"] = "false";
+				Log("Logging", "Logging has been disabled as an error has occured whilst logging: " + ex->Message);
+			}
+		}
+
 		txtChat->AppendText("[" + header + "] ");
 		// + body + "\n";
 		for (int i = 0; i < body->Length; i++)
@@ -139,48 +172,50 @@ namespace MinecraftClassicChat
 
 			// Login packet
 			Log("Connection", "Authenticating as " + username);
-			username = username->PadRight(64, ' ');
-			mppass = mppass->PadRight(64, ' ');
-			List<byte>^ packet = gcnew List<byte>();
-			packet->AddRange(convertByteArray(gcnew array<byte> { 0x00, 0x07 }));
-			packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(username)));
-			packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(mppass)));
-			packet->AddRange(convertByteArray(gcnew array<byte> { 0x42 }));
-			tcpStream->Write(packet->ToArray(), 0, packet->ToArray()->Length);
+			SendLogin(username, mppass);
 		}
 		catch (Exception^ ex)
 		{
 			connected = true;
-			Disconnect();
-
+			Disconnect(true);
 			Log("Connection", "Unable to connect: " + ex->Message);
 			MessageBox::Show("Unable to connect: " + ex->Message, "Connection Error", 
 				MessageBoxButtons::OK, MessageBoxIcon::Error);
 		}
 	}
 
-	
 	void MainForm::Disconnect()
+	{
+		Disconnect(false);
+	}
+
+	void MainForm::Disconnect(bool noLog)
 	{
 		if (!connected) return;
 		connected = false;
 		serverSupportsCPE = false;
-		supportsLongerMessages = false;
+		serverIP = nullptr;
+		serverPort = 0;
 		messagesToSend = nullptr;
 		extCount = 0;
 		recievedExts = 0;
-		serverCPEExtensions = gcnew Dictionary<String^, int>();
 		serverSoftwareName = nullptr;
+		serverCPEExtensions = gcnew Dictionary<String^, int>();
 		lastLevelPercentange = 0;
-		btnLogin->Enabled = true;
-		btnDisconnect->Enabled = false;
-		btnSend->Enabled = false;
-		serverIP = nullptr;
-		serverPort = 0;
+		
+		// delete = Dispose()
 		delete tcpClient;
 		delete tcpStream;
 		delete tcpThread;
-		Log("Connection", "Disconnected");
+
+		btnLogin->Enabled = true;
+		btnDisconnect->Enabled = false;
+		btnSend->Enabled = false;
+
+		if (!noLog)
+		{
+			Log("Connection", "Disconnected from the server");
+		}
 		Text = ApplicationName + " - Disconnected";
 	}
 
@@ -245,13 +280,26 @@ namespace MinecraftClassicChat
 		}
 	}
 
+	void MainForm::SendLogin(String^ username, String^ mppass)
+	{
+		username = username->PadRight(64, ' ');
+		mppass = mppass->PadRight(64, ' ');
+
+		List<byte>^ packet = gcnew List<byte>();
+		packet->AddRange(convertByteArray(gcnew array<byte> { 0x00, 0x07 }));
+		packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(username)));
+		packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(mppass)));
+		packet->AddRange(convertByteArray(gcnew array<byte> { (Settings->Entries["cpe"]->Equals("true") ? 0x42 : 0x00) }));
+
+		tcpStream->Write(packet->ToArray(), 0, packet->ToArray()->Length);
+	}
+
 	void MainForm::SendChatMessage(String^ message)
 	{
 		if (!connected) return;
-		message = message->PadRight(64, ' ')->Substring(0, 64);
 
 		int j = 0;
-		if (supportsLongerMessages) 
+		if (serverCPEExtensions->ContainsKey("LongerMessages")) 
 		{
 			for (int i = 0; i < message->Length; i += 64)
 			{
@@ -285,7 +333,7 @@ namespace MinecraftClassicChat
 		if (!connected) return;
 		List<byte>^ packet = gcnew List<byte>();
 		packet->AddRange(convertByteArray(gcnew array<byte> { 0x10 }));
-		packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(cpeClientName->PadRight(64, ' '))));
+		packet->AddRange(convertByteArray(Encoding::ASCII->GetBytes(CPEName->PadRight(64, ' '))));
 		packet->AddRange(convertByteArray(gcnew array<byte> { 0x00, 0x05 }));
 		tcpStream->Write(packet->ToArray(), 0, packet->ToArray()->Length);
 
@@ -312,8 +360,6 @@ namespace MinecraftClassicChat
 
 	void MainForm::ReceivedPacket(byte id, array<byte>^ data)
 	{
-		//Log("Connection", "Received packet " + id + ": " + BitConverter::ToString(data));
-
 		// 0x00: Login packet
 		// 0x02: Level init
 		// 0x03: Level chunk
@@ -398,7 +444,7 @@ namespace MinecraftClassicChat
 		}
 		else if (id == 0x0e)
 		{
-			Disconnect();
+			Disconnect(true);
 			String^ kickReason = Encoding::UTF8->GetString(data);
 			Log("Connection", "You have been kicked: " + kickReason);
 			MessageBox::Show(kickReason, "You have been kicked",
@@ -426,8 +472,6 @@ namespace MinecraftClassicChat
 			String^ extName = Encoding::UTF8->GetString(extNameRaw)->Trim();
 			int extVer = (extVerRaw[0] << 24) | (extVerRaw[1] << 16) | (extVerRaw[2] << 8) | extVerRaw[3];
 			RegisterExtension(extName, extVer);
-			if (!serverCPEExtensions->ContainsKey(extName)) 
-				serverCPEExtensions->Add(extName, extVer);
 			recievedExts++;
 			if (recievedExts == (short)extCount) 
 			{
@@ -454,11 +498,15 @@ namespace MinecraftClassicChat
 		}
 	}
 
-	void MainForm::RegisterExtension(String^ extName, int^ extVer)
+	void MainForm::RegisterExtension(String^ extName, int extVer)
 	{
+		if (!serverCPEExtensions->ContainsKey(extName)) 
+		{
+			serverCPEExtensions->Add(extName, extVer);
+		}
+
 		if (extName->Contains("LongerMessages"))
 		{
-			supportsLongerMessages = true;
 			txtInput->MaxLength = Int32::MaxValue;
 		}
 		// TODO: ADD MORE EXTENSIONS HERE
@@ -466,9 +514,10 @@ namespace MinecraftClassicChat
 
 	void MainForm::ShowLoginForm()
 	{
-		loginForm = gcnew LoginForm();
+		LoginForm^ loginForm = gcnew LoginForm();
 		loginForm->ClientConnect += gcnew ClientConnectDelegate(this, &MainForm::Connect);
 		loginForm->ShowDialog();
+		delete loginForm;
 	}
 
 	Void MainForm::btnSend_Click(Object^ sender, EventArgs^ e)
@@ -497,6 +546,13 @@ namespace MinecraftClassicChat
 	Void MainForm::btnClearChat_Click(Object^ sender, EventArgs^ e)
 	{
 		txtChat->Text = nullptr;
+	}
+
+	Void MainForm::btnSettings_Click(Object^ sender, EventArgs^ e)
+	{
+		SettingsForm^ settingsForm = gcnew SettingsForm(Settings, SettingsFilePath);
+		settingsForm->ShowDialog();
+		delete settingsForm;
 	}
 
 	Void MainForm::MainForm_FormClosing(Object^ sender, FormClosingEventArgs^ e)

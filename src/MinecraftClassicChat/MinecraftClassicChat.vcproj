@@ -271,8 +271,22 @@
 				</File>
 			</File>
 			<File
+				RelativePath=".\MCCSettings.h"
+				>
+			</File>
+			<File
 				RelativePath=".\resource.h"
 				>
+			</File>
+			<File
+				RelativePath=".\SettingsForm.h"
+				FileType="3"
+				>
+				<File
+					RelativePath=".\SettingsForm.resx"
+					SubType="Designer"
+					>
+				</File>
 			</File>
 			<File
 				RelativePath=".\stdafx.h"

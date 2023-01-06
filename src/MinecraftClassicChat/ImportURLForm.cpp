@@ -1,4 +1,4 @@
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "ImportURLForm.h"
 
 namespace MinecraftClassicChat 
@@ -14,7 +14,7 @@ namespace MinecraftClassicChat
 
 		if (String::IsNullOrEmpty(url) || !url->StartsWith("mc://") || url->Split('/')->Length != 5)
 		{
-			MessageBox::Show("The specified URL is invalid!" + url->Split('/')->Length, "Error", 
+			MessageBox::Show("The specified URL is invalid!", "Error", 
 				MessageBoxButtons::OK, MessageBoxIcon::Error);
 			return;
 		}

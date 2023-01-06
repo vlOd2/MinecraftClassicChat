@@ -1,8 +1,11 @@
 #pragma once
 
-#include "LoginForm.h"
+// Classes
+#include "MCCSettings.h"
 
-#define byte unsigned char
+// Forms
+#include "LoginForm.h"
+#include "SettingsForm.h"
 
 using namespace System;
 using namespace System::ComponentModel;
@@ -20,10 +23,7 @@ namespace MinecraftClassicChat
 {
 	public ref class MainForm : public System::Windows::Forms::Form
 	{
-		static String^ ApplicationName = "MCC v1.0";
-
-	public:
-		MainForm();
+#pragma region Windows Form Designer generated code
 	protected:
 		~MainForm()
 		{
@@ -31,46 +31,27 @@ namespace MinecraftClassicChat
 			{
 				delete components;
 			}
-			if (loginForm)
-			{
-				delete loginForm;
-			}
 		}
 	protected: System::Windows::Forms::RichTextBox^  txtChat;
 	protected: System::Windows::Forms::TextBox^  txtInput;
 	protected: System::Windows::Forms::Button^  btnSend;
-
-
-
-
-
-
-	protected: System::Windows::Forms::Button^  btnConnect;
-	protected: System::Windows::Forms::Button^  btnDisconnect;
-	protected: System::Windows::Forms::Button^  btnClearChat;
 	private: System::Windows::Forms::Button^  btnLogin;
+	protected: System::Windows::Forms::Button^  btnDisconnect;
+	private: System::Windows::Forms::Button^  btnSettings;
+	protected: System::Windows::Forms::Button^  btnClearChat;
 
-
-	private: System::ComponentModel::IContainer^  components;
-	protected: 
-
-	protected: 
-
-	protected: 
-
-#pragma region Windows Form Designer generated code
-	private:
-
+	private: 
+		System::ComponentModel::IContainer^  components;
 
 		void InitializeComponent(void)
 		{
 			this->txtChat = (gcnew System::Windows::Forms::RichTextBox());
 			this->txtInput = (gcnew System::Windows::Forms::TextBox());
 			this->btnSend = (gcnew System::Windows::Forms::Button());
-			this->btnConnect = (gcnew System::Windows::Forms::Button());
 			this->btnDisconnect = (gcnew System::Windows::Forms::Button());
 			this->btnClearChat = (gcnew System::Windows::Forms::Button());
 			this->btnLogin = (gcnew System::Windows::Forms::Button());
+			this->btnSettings = (gcnew System::Windows::Forms::Button());
 			this->SuspendLayout();
 			// 
 			// txtChat
@@ -84,7 +65,7 @@ namespace MinecraftClassicChat
 			this->txtChat->Location = System::Drawing::Point(3, 28);
 			this->txtChat->Name = L"txtChat";
 			this->txtChat->ReadOnly = true;
-			this->txtChat->Size = System::Drawing::Size(591, 267);
+			this->txtChat->Size = System::Drawing::Size(665, 313);
 			this->txtChat->TabIndex = 0;
 			this->txtChat->Text = L"";
 			// 
@@ -94,10 +75,10 @@ namespace MinecraftClassicChat
 				| System::Windows::Forms::AnchorStyles::Right));
 			this->txtInput->BackColor = System::Drawing::Color::DimGray;
 			this->txtInput->ForeColor = System::Drawing::Color::White;
-			this->txtInput->Location = System::Drawing::Point(3, 303);
+			this->txtInput->Location = System::Drawing::Point(3, 349);
 			this->txtInput->MaxLength = 64;
 			this->txtInput->Name = L"txtInput";
-			this->txtInput->Size = System::Drawing::Size(510, 20);
+			this->txtInput->Size = System::Drawing::Size(584, 20);
 			this->txtInput->TabIndex = 1;
 			this->txtInput->KeyPress += gcnew System::Windows::Forms::KeyPressEventHandler(this, &MainForm::txtInput_KeyPress);
 			// 
@@ -109,19 +90,13 @@ namespace MinecraftClassicChat
 			this->btnSend->FlatAppearance->BorderColor = System::Drawing::Color::White;
 			this->btnSend->FlatStyle = System::Windows::Forms::FlatStyle::Flat;
 			this->btnSend->ForeColor = System::Drawing::Color::White;
-			this->btnSend->Location = System::Drawing::Point(518, 302);
+			this->btnSend->Location = System::Drawing::Point(592, 348);
 			this->btnSend->Name = L"btnSend";
 			this->btnSend->Size = System::Drawing::Size(75, 23);
 			this->btnSend->TabIndex = 2;
 			this->btnSend->Text = L"Send";
 			this->btnSend->UseVisualStyleBackColor = false;
-			// 
-			// btnConnect
-			// 
-			this->btnConnect->Location = System::Drawing::Point(0, 0);
-			this->btnConnect->Name = L"btnConnect";
-			this->btnConnect->Size = System::Drawing::Size(75, 23);
-			this->btnConnect->TabIndex = 0;
+			this->btnSend->Click += gcnew System::EventHandler(this, &MainForm::btnSend_Click);
 			// 
 			// btnDisconnect
 			// 
@@ -136,6 +111,7 @@ namespace MinecraftClassicChat
 			this->btnDisconnect->TabIndex = 10;
 			this->btnDisconnect->Text = L"Disconnect";
 			this->btnDisconnect->UseVisualStyleBackColor = false;
+			this->btnDisconnect->Click += gcnew System::EventHandler(this, &MainForm::btnDisconnect_Click);
 			// 
 			// btnClearChat
 			// 
@@ -149,6 +125,7 @@ namespace MinecraftClassicChat
 			this->btnClearChat->TabIndex = 11;
 			this->btnClearChat->Text = L"Clear Chat";
 			this->btnClearChat->UseVisualStyleBackColor = false;
+			this->btnClearChat->Click += gcnew System::EventHandler(this, &MainForm::btnClearChat_Click);
 			// 
 			// btnLogin
 			// 
@@ -164,22 +141,37 @@ namespace MinecraftClassicChat
 			this->btnLogin->UseVisualStyleBackColor = false;
 			this->btnLogin->Click += gcnew System::EventHandler(this, &MainForm::btnLogin_Click);
 			// 
+			// btnSettings
+			// 
+			this->btnSettings->FlatAppearance->BorderColor = System::Drawing::Color::White;
+			this->btnSettings->FlatStyle = System::Windows::Forms::FlatStyle::Flat;
+			this->btnSettings->ForeColor = System::Drawing::Color::White;
+			this->btnSettings->Location = System::Drawing::Point(246, 2);
+			this->btnSettings->Name = L"btnSettings";
+			this->btnSettings->Size = System::Drawing::Size(75, 23);
+			this->btnSettings->TabIndex = 13;
+			this->btnSettings->Text = L"Settings";
+			this->btnSettings->UseVisualStyleBackColor = true;
+			this->btnSettings->Click += gcnew System::EventHandler(this, &MainForm::btnSettings_Click);
+			// 
 			// MainForm
 			// 
 			this->AutoScaleDimensions = System::Drawing::SizeF(6, 13);
 			this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
 			this->BackColor = System::Drawing::Color::DimGray;
-			this->ClientSize = System::Drawing::Size(596, 333);
+			this->ClientSize = System::Drawing::Size(670, 379);
+			this->Controls->Add(this->btnSettings);
 			this->Controls->Add(this->btnLogin);
 			this->Controls->Add(this->btnClearChat);
 			this->Controls->Add(this->btnDisconnect);
 			this->Controls->Add(this->btnSend);
 			this->Controls->Add(this->txtInput);
 			this->Controls->Add(this->txtChat);
-			this->MinimumSize = System::Drawing::Size(250, 113);
+			this->MinimumSize = System::Drawing::Size(332, 113);
 			this->Name = L"MainForm";
 			this->ShowIcon = false;
 			this->StartPosition = System::Windows::Forms::FormStartPosition::CenterScreen;
+			this->FormClosing += gcnew System::Windows::Forms::FormClosingEventHandler(this, &MainForm::MainForm_FormClosing);
 			this->ResumeLayout(false);
 			this->PerformLayout();
 
@@ -189,14 +181,11 @@ namespace MinecraftClassicChat
 	private: 
 		Dictionary<int, int>^ packetSizeMap;
 		Dictionary<wchar_t, int>^ textColors;
-		LoginForm^ loginForm;
 		bool connected;
 		bool serverSupportsCPE;
-		bool supportsLongerMessages;
-		String^ cpeClientName;
 		String^ serverIP;
-		array<String^>^ messagesToSend;
 		int serverPort;
+		array<String^>^ messagesToSend;
 		short extCount;
 		short recievedExts;
 		String^ serverSoftwareName;
@@ -215,20 +204,32 @@ namespace MinecraftClassicChat
 			}
 		}
 		
-		void Log(String^ header, String^ body);
-		void Connect(String^ ip, int port, String^ username, String^ mppass);
-		void Disconnect();
 		void tcpThread_Func();
-		void SendChatMessage(String^ message);
-		void SendCpeInfo();
-		void SendExtInfo(String^ extName, int^ extVer);
-		void ReceivedPacket(byte id, array<byte>^ data);
-		void RegisterExtension(String^ extName, int^ extVer);
-		void ShowLoginForm();
 		Void btnSend_Click(Object^ sender, EventArgs^ e);
 		Void btnLogin_Click(Object^ sender, EventArgs^ e);
 		Void btnDisconnect_Click(Object^ sender, EventArgs^ e);
 		Void btnClearChat_Click(Object^ sender, EventArgs^ e);
+		Void btnSettings_Click(Object^ sender, EventArgs^ e);
 		Void MainForm_FormClosing(Object^ sender, FormClosingEventArgs^ e);
+
+	public:
+		static String^ ApplicationName = "MCC v1.1";
+		static String^ CPEName = "MCC/1.1";
+		static String^ DataFolderPath = Environment::GetFolderPath(Environment::SpecialFolder::ApplicationData) + "\\MCC";
+		static String^ SettingsFilePath = DataFolderPath + "\\settings.txt";
+		MCCSettings^ Settings;
+
+		MainForm();
+		void Log(String^ header, String^ body);
+		void Connect(String^ ip, int port, String^ username, String^ mppass);
+		void Disconnect();
+		void Disconnect(bool noLog);
+		void SendLogin(String^ username, String^ mppass);
+		void SendChatMessage(String^ message);
+		void SendCpeInfo();
+		void SendExtInfo(String^ extName, int^ extVer);
+		void ReceivedPacket(byte id, array<byte>^ data);
+		void RegisterExtension(String^ extName, int extVer);
+		void ShowLoginForm();
 	};
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ImportURLForm.h"
+
 using namespace System;
 using namespace System::ComponentModel;
 using namespace System::Collections;
@@ -7,8 +9,6 @@ using namespace System::Windows::Forms;
 using namespace System::Data;
 using namespace System::Drawing;
 using namespace System::Threading;
-
-#include "ImportURLForm.h"
 
 namespace MinecraftClassicChat 
 {
@@ -29,18 +29,12 @@ namespace MinecraftClassicChat
 		}
 	private: System::Windows::Forms::Button^  btnLogin;
 	private: System::Windows::Forms::Button^  btnImportURL;
-	protected: 
-
-	protected: 
-
 	private: System::Windows::Forms::Label^  label1;
 	private: System::Windows::Forms::Label^  label2;
 	private: System::Windows::Forms::Label^  label3;
 	private: System::Windows::Forms::Label^  label4;
 	private: System::Windows::Forms::TextBox^  txtUsername;
 	private: System::Windows::Forms::TextBox^  txtServer;
-
-
 	private: System::Windows::Forms::TextBox^  txtMPPass;
 
 
